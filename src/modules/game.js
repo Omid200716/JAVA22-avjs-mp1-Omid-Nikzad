@@ -97,23 +97,32 @@ export async function game() {
     const databaseURL =
       "https://highscore-66ea9-default-rtdb.europe-west1.firebasedatabase.app/highscore.json";
 
-    const response = await fetch(databaseURL);
-    const data = await response.json();
-    let highscore2 = data || [];
+    // Hämta den nuvarande highscore-listan från databasen
+    let highscore = await getHighScoreList() || [];
 
-    const playerIndex = highscore2.findIndex((item) => item.name === name);
-  
-    if (playerIndex !== -1) {
-      highscore2[playerIndex].score = poäng;
-    } else {
-      highscore2.push({ name: name, score: poäng });
+    // Hitta om den nuvarande spelaren redan finns i listan
+    const existingPlayerIndex = highscore.findIndex(player => player.name === name);
+
+    if (existingPlayerIndex !== -1) {
+        // Om den nuvarande spelaren redan finns och har en högre poäng, uppdatera poängen
+        if (poäng > highscore[existingPlayerIndex].score) {
+            highscore[existingPlayerIndex].score = poäng;
+        }
+    } else if (highscore.length < 5 || poäng > highscore[4].score) {
+        // Lägg till den nuvarande spelaren om listan har mindre än 5 spelare
+        // eller om spelaren har en högre poäng än den lägsta i listan
+        highscore.push({ name, score: poäng });
     }
-  
-    highscore2.sort((a, b) => b.score - a.score);
-    highscore2 = highscore2.slice(0, 5);
 
-    const headers = { "Content-Type": "application/json"};
-    const body = JSON.stringify(highscore2);
+    // Sortera listan i fallande ordning baserat på poäng
+    highscore.sort((a, b) => b.score - a.score);
+
+    // Behåll bara topp 5 poäng
+    highscore = highscore.slice(0, 5);
+
+    // Uppdatera databasen med den nya listan
+    const headers = { "Content-Type": "application/json" };
+    const body = JSON.stringify(highscore);
     const putResponse = await fetch(databaseURL, {
       method: "PUT",
       headers: headers,
@@ -125,13 +134,14 @@ export async function game() {
 
     console.log("Firebase database updated successfully");
     await getHighScore();
-  }
+}
 
-  function createElement(data) {
+function createElement(data) {
     const element = document.createElement("h4");
     divContainer.append(element);
     element.innerText = data;
-  }
+}
 
-  await getHighScore();
+await getHighScore();
+
 }
